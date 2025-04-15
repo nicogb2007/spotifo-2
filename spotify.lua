@@ -21,7 +21,7 @@ end
 
 -- Télécharger la playlist JSON en ligne
 local playlistFile = "playlist.json"
-local playlistURL = "https://raw.githubusercontent.com/Miniprimestaff/music-cc/main/program/playlist.json"
+local playlistURL = "https://github.com/nicogb2007/spotifo-2/raw/refs/heads/main/playlist.json"
 local response = http.get(playlistURL)
 
 if response then
