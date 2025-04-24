@@ -1,134 +1,118 @@
+-- Assurez-vous que l'API HTTP est activée dans la config de CC:Tweaked
+
 local aukitPath = "aukit.lua"
 local austreamPath = "austream.lua"
 local upgradePath = "upgrade"
-local playlistFile = "playlist.json"
-local playlistURL = "https://github.com/nicogb2007/spotifo-2/raw/refs/heads/main/playlist.json"
 
 local function fileExists(path)
   return fs.exists(path) and not fs.isDir(path)
 end
 
--- Télécharger les fichiers nécessaires
+-- Téléchargement des dépendances
 if not fileExists(aukitPath) then
-  shell.run("wget", "https://github.com/MCJack123/AUKit/raw/master/aukit.lua", aukitPath)
+  shell.run("wget run https://github.com/MCJack123/AUKit/raw/master/aukit.lua")
 end
 
 if not fileExists(austreamPath) then
-  shell.run("wget", "https://github.com/MCJack123/AUKit/raw/master/austream.lua", austreamPath)
+  shell.run("wget run https://github.com/MCJack123/AUKit/raw/master/austream.lua")
 end
 
 if not fileExists(upgradePath) then
-  shell.run("pastebin", "get", "PvwtVW1S", upgradePath)
+  shell.run("pastebin get PvwtVW1S " .. upgradePath)
 end
 
--- Télécharger la playlist
+-- Récupérer la playlist
+local playlistURL = "https://github.com/nicogb2007/spotifo-2/raw/refs/heads/main/playlist.json"
 local response = http.get(playlistURL)
+
 if not response then
-  print("Erreur lors du téléchargement de la playlist.")
+  print("Erreur : impossible de télécharger la playlist.")
   return
 end
 
-local playlistData = response.readAll()
+local data = response.readAll()
 response.close()
 
-local success, onlinePlaylist = pcall(textutils.unserializeJSON, playlistData)
-if not success or type(onlinePlaylist) ~= "table" then
-  print("Erreur de parsing de la playlist en ligne.")
+local ok, onlinePlaylist = pcall(textutils.unserializeJSON, data)
+if not ok or type(onlinePlaylist) ~= "table" then
+  print("Erreur : playlist en ligne invalide.")
   return
 end
 
 -- Charger ou initialiser la playlist locale
+local playlistFile = "playlist.json"
 local playlist = {}
+
 if fileExists(playlistFile) then
-  local handle = fs.open(playlistFile, "r")
-  local content = handle.readAll()
-  handle.close()
-  local ok, localData = pcall(textutils.unserializeJSON, content)
-  if ok and type(localData) == "table" then
-    playlist = localData
-  end
+  local f = fs.open(playlistFile, "r")
+  local localData = f.readAll()
+  f.close()
+  playlist = textutils.unserializeJSON(localData) or {}
 end
 
--- Fusionner sans doublons
-local titles = {}
-for _, track in ipairs(playlist) do
-  titles[track.title] = true
-end
-for _, track in ipairs(onlinePlaylist) do
-  if not titles[track.title] then
-    table.insert(playlist, track)
-    titles[track.title] = true
-  end
+-- Fusionner les playlists
+for _, entry in ipairs(onlinePlaylist) do
+  table.insert(playlist, entry)
 end
 
--- Sauvegarder la playlist fusionnée
-local handle = fs.open(playlistFile, "w")
-handle.write(textutils.serializeJSON(playlist))
-handle.close()
+-- Sauvegarder la nouvelle playlist
+local f = fs.open(playlistFile, "w")
+f.write(textutils.serializeJSON(playlist))
+f.close()
 
--- Liste de titres
-local musicList = {}
-for _, track in ipairs(playlist) do
-  table.insert(musicList, track.title)
-end
-
--- Fonction pour lire une musique
-local function playMusic(_, url)
+-- Affichage du menu
+local function playMusic(title, url)
+  print("Lecture de : " .. title)
   shell.run(austreamPath, url)
 end
 
+local function displayMenu()
+  local musicList = {}
+  for _, e in ipairs(playlist) do table.insert(musicList, e.title) end
 
--- Affichage du menu
-local function displayMusicMenu()
-  local itemsPerPage = 6
-  local currentPage = 1
-  local selectedIndex = 1
-  local totalPages = math.ceil(#musicList / itemsPerPage)
+  local page, selection = 1, 1
+  local perPage = 6
+  local maxPage = math.ceil(#musicList / perPage)
 
   while true do
     term.clear()
-    local w, h = term.getSize()
-    term.setCursorPos((w - #"Spotifo") / 2, 2)
-    term.setTextColor(colors.green)
-    term.write("Spotifo")
-    term.setCursorPos((w - #"by Dartsgame") / 2, 3)
-    term.write("by Dartsgame")
+    term.setCursorPos(1, 1)
+    print("Spotifo - by Dartsgame")
+    print(string.rep("-", 20))
 
-    local startIndex = (currentPage - 1) * itemsPerPage + 1
-    local endIndex = math.min(startIndex + itemsPerPage - 1, #musicList)
-
-    for i = startIndex, endIndex do
-      if i - startIndex + 1 == selectedIndex then
+    local startIdx = (page - 1) * perPage + 1
+    for i = 0, perPage - 1 do
+      local idx = startIdx + i
+      if idx > #musicList then break end
+      if i + 1 == selection then
         term.setTextColor(colors.green)
       else
         term.setTextColor(colors.white)
       end
-      print((i - startIndex + 1) .. ". " .. musicList[i])
+      print((i + 1) .. ". " .. musicList[idx])
     end
 
-
-    term.setCursorPos((w - 15) / 2, h)
     term.setTextColor(colors.white)
-    term.write("Page " .. currentPage .. "/" .. totalPages)
-
+    print(string.format("Page %d / %d", page, maxPage))
     local _, key = os.pullEvent("key")
+
     if key == keys.up then
-      selectedIndex = selectedIndex - 1
-      if selectedIndex < 1 then selectedIndex = endIndex - startIndex + 1 end
+      selection = selection - 1
+      if selection < 1 then selection = perPage end
     elseif key == keys.down then
-      selectedIndex = selectedIndex + 1
-      if selectedIndex > endIndex - startIndex + 1 then selectedIndex = 1 end
-    elseif key == keys.left and currentPage > 1 then
-      currentPage = currentPage - 1
-      selectedIndex = 1
-    elseif key == keys.right and currentPage < totalPages then
-      currentPage = currentPage + 1
-      selectedIndex = 1
+      selection = selection + 1
+      if selection > perPage then selection = 1 end
+    elseif key == keys.left then
+      if page > 1 then page = page - 1 selection = 1 end
+    elseif key == keys.right then
+      if page < maxPage then page = page + 1 selection = 1 end
     elseif key == keys.enter then
-      local selected = playlist[startIndex + selectedIndex - 1]
-      playMusic(selected.title, selected.link)
+      local idx = (page - 1) * perPage + selection
+      if playlist[idx] then
+        playMusic(playlist[idx].title, playlist[idx].url)
+      end
     end
   end
 end
 
-displayMusicMenu()
+displayMenu()
