@@ -37,7 +37,7 @@ if response then
       local fileHandle = fs.open(playlistFile, "r")
       local localPlaylistData = fileHandle.readAll()
       fileHandle.close()
-      playlist = textutils.unserializeJSON(localPlaylistData)
+      playlist = textutils.unserializeJSON(playlist)
     else
       local fileHandle = fs.open(playlistFile, "w")
       fileHandle.write(textutils.serializeJSON(playlist))
