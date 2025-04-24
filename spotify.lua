@@ -126,7 +126,7 @@ local function displayMusicMenu()
       selectedIndex = 1
     elseif key == keys.enter then
       local selected = playlist[startIndex + selectedIndex - 1]
-      playMusic(selected.title, selected.url)
+      playMusic(selected.title, selected.link)
     end
   end
 end
