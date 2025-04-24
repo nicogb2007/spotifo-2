@@ -98,14 +98,14 @@ local function displayMusicMenu()
     local endIndex = math.min(startIndex + itemsPerPage - 1, #musicList)
 
     for i = startIndex, endIndex do
-      term.setCursorPos(1, 5 + i - startIndex)
       if i - startIndex + 1 == selectedIndex then
         term.setTextColor(colors.green)
       else
         term.setTextColor(colors.white)
       end
-      term.write((i - startIndex + 1) .. ". " .. musicList[i])
+      print((i - startIndex + 1) .. ". " .. musicList[i])
     end
+
 
     term.setCursorPos((w - 15) / 2, h)
     term.setTextColor(colors.white)
