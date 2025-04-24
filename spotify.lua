@@ -113,24 +113,31 @@ local function displayMusicMenu()
     term.setTextColor(colors.white)
     term.write("Page " .. currentPage .. "/" .. totalPages)
 
-    local _, key = os.pullEvent("key")
-    if key == keys.up then
-      selectedIndex = selectedIndex - 1
-      if selectedIndex < 1 then selectedIndex = endIndex - startIndex + 1 end
-    elseif key == keys.down then
-      selectedIndex = selectedIndex + 1
-      if selectedIndex > endIndex - startIndex + 1 then selectedIndex = 1 end
-    elseif key == keys.left and currentPage > 1 then
-      currentPage = currentPage - 1
-      selectedIndex = 1
-    elseif key == keys.right and currentPage < totalPages then
-      currentPage = currentPage + 1
-      selectedIndex = 1
-    elseif key == keys.enter then
-      local selected = playlist[startIndex + selectedIndex - 1]
-      playMusic(selected.title, selected.url)
+        -- Navigation avec les flèches et sélection
+        local _, key = os.pullEvent("key")
+
+        if key == keys.up then
+          selectedIndex = selectedIndex - 1
+          if selectedIndex < 1 then
+            selectedIndex = endIndex - startIndex + 1
+          end
+        elseif key == keys.down then
+          selectedIndex = selectedIndex + 1
+          if selectedIndex > endIndex - startIndex + 1 then
+            selectedIndex = 1
+          end
+        elseif key == keys.left and currentPage > 1 then
+          currentPage = currentPage - 1
+          selectedIndex = 1
+        elseif key == keys.right and currentPage < totalPages then
+          currentPage = currentPage + 1
+          selectedIndex = 1
+        elseif key == keys.enter then
+          local selectedOption = startIndex + selectedIndex - 1
+          local selectedMusic = playlist[selectedOption]
+          playMusic(selectedMusic.title, selectedMusic.url)
+        end
+      end
     end
-  end
-end
 
 displayMusicMenu()
